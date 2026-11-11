@@ -1,0 +1,2 @@
+Proyecto final: NimbusDC, un mini centro de datos con
+sistema operativo propio

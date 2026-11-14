@@ -1,3 +1,8 @@
+class APIProcesos:
+    def __init__(self):
+        pass
+
+
 # Devuelve el PID
 def crear_proceso(
     nombre: str,
@@ -30,7 +35,6 @@ def listar_procesos():
     pass
 
 
-#
 def cola_listos():
     pass
 

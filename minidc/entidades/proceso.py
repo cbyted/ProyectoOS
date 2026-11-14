@@ -5,6 +5,7 @@ class Proceso:
         nombre: str,
         servicio: str,
         usuario: str,
+        estado: str,
         prioridad: int,
         tiempo_llegada: int,
         tiempo_esperado: int,
@@ -14,7 +15,7 @@ class Proceso:
         self.nombre = nombre
         self.servicio = servicio
         self.usuario = usuario
-        self.estado = "NUEVO"
+        self.estado = estado
         self.prioridad = prioridad
         self.tiempo_llegada = tiempo_llegada
         self.rafaga_cpu = rafaga_cpu
@@ -30,12 +31,6 @@ class Proceso:
 
     def cambiar_estado(self, nuevo_estado):
         pass
-
-    def asignar_cpu(self, cpu_time):
-        self.cpu_time = cpu_time
-
-    def despojar_cpu(self):
-        self.cpu_time = 0
 
     def terminar(self):
         self.abortar = 1

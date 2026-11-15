@@ -9,11 +9,11 @@ def main():
     global reloj
 
     procesos = [
-        Proceso(1, "Editor", "edicion", "ana", "LISTO", 3, 1, 8),
-        Proceso(2, "Navegador", "web", "luis", "LISTO", 1, 1, 5),
-        Proceso(3, "Compilador", "desarrollo", "ana", "LISTO", 2, 2, 10),
-        Proceso(4, "Reproductor", "multimedia", "marta", "LISTO", 4, 3, 4),
-        Proceso(5, "Terminal", "sistema", "luis", "LISTO", 2, 4, 6),
+        Proceso(1, "Editor", "edicion", "ana", "NUEVO", 3, 1, 20),
+        Proceso(2, "Navegador", "web", "luis", "NUEVO", 1, 1, 25),
+        Proceso(3, "Compilador", "desarrollo", "ana", "NUEVO", 2, 2, 39),
+        Proceso(4, "Reproductor", "multimedia", "marta", "NUEVO", 4, 3, 40),
+        Proceso(5, "Terminal", "sistema", "luis", "NUEVO", 2, 4, 60),
     ]
 
     planificador = MLFQ([17, 25], procesos, 2)
@@ -21,9 +21,9 @@ def main():
     # Ejecutar varios ticks para prueba
     for i in range(100):
         reloj += 1
-        planificador.ejecutar_tick(reloj)
+        print(f"RELOJ ACTUAL: {reloj}")
         planificador.mostrar_resultado_tick()
-        print("\n")
+        planificador.ejecutar_tick(reloj)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,6 @@ class MLFQ:
         # El tiempo que falta para que el proceso termine
         self.quantum_restante = [0] * num_cpus
 
-    # Añadir un proceso recien llegado a la cola de mayor prioridad
     def nuevo(self, proceso: Proceso):
         self.colas[0].append(proceso)
 
@@ -108,8 +107,6 @@ class MLFQ:
 
     # Algoritmo para las demás colas
     def round_robin(self, cpu: int, reloj_actual: int) -> None:
-
-        self.actualizar_tiempo_espera(reloj_actual)
         self.proceso_actual[cpu].rafaga_cpu -= 1
         self.quantum_restante[cpu] -= 1
 
@@ -124,8 +121,9 @@ class MLFQ:
             self.proceso_actual[cpu] = None
             self.nivel_actual[cpu] = None
             self.quantum_restante[cpu] = 0
-
-        if self.quantum_restante[cpu] == 0:
+        elif (
+            self.quantum_restante[cpu] == 0 and self.proceso_actual[cpu].rafaga_cpu > 0
+        ):
             nivel_siguiente = self.nivel_actual[cpu] + 1
             self.colas[nivel_siguiente].append(self.proceso_actual[cpu])
 
@@ -134,14 +132,21 @@ class MLFQ:
             self.quantum_restante[cpu] = 0
 
     def ejecutar_tick(self, reloj_actual: int) -> None:
+        # Admitir procesos
+        for proceso in self.procesos:
+            if proceso.tiempo_llegada == reloj_actual:
+                self.nuevo(proceso)
+
         # Los procesos listos esperan un tick.
         for cola in self.colas:
             for proceso in cola:
+                proceso.cambiar_estado("LISTO")
                 proceso.tiempo_espera += 1
 
         # Cada CPU selecciona y ejecuta como máximo un proceso.
         for cpu in range(self.num_cpus):
-            self.elegir_proceso(cpu)
+            if self.proceso_actual[cpu] is None:
+                self.elegir_proceso(cpu)
 
             nivel = self.nivel_actual[cpu]
             if self.proceso_actual[cpu] is None or nivel is None:
@@ -158,5 +163,5 @@ class MLFQ:
             if cola:
                 print(f"Nivel {nivel}: [")
                 for proceso in cola:
-                    print(f"{proceso.rafaga_cpu}, ")
-                print("]")
+                    print(f"  {proceso.rafaga_cpu},")
+                print("]\n")

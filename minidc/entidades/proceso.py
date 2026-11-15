@@ -27,7 +27,7 @@ class Proceso:
         self.tiempo_finalizacion = 0
 
     def cambiar_estado(self, nuevo_estado):
-        pass
+        self.estado = nuevo_estado
 
     def terminar(self):
         self.abortar = 1

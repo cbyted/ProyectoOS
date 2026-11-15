@@ -24,8 +24,8 @@ El paquete `minidc` sigue una separación por capas diseñada para desacoplar la
 
 ```text
 ProyectoOS/
-├── informe/                 
-│   └── example.txt
+├── docs/                 
+│   └── Diagrama_de_NimbusDC.md
 ├── minidc/                  
 │   ├── entidades/           
 │   ├── politicas/           

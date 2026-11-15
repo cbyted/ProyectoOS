@@ -23,11 +23,9 @@ class Proceso:
         self.hilos = []
 
         # Metricas únicas de cada proceso
-        self.tiempo_restante = self.rafaga_cpu
-        self.espera_promedio = 0
-        self.espera_maxima = 0
-        self.retorno_promedio = 0
-        self.tiempo_completado = 0
+        self.tiempo_espera = 0
+        self.tiempo_retorno = 0
+        self.tiempo_finalizacion = 0
 
     def cambiar_estado(self, nuevo_estado):
         pass

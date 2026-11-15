@@ -28,7 +28,7 @@ class Kernel:
         self.cache_bloques = 0
 
     # Reinicia TODO el sistema
-    def inicia_sistema(self, config: dict) -> None:
+    def iniciar_sistema(self, config: dict) -> None:
         pass
 
     # Resumen final
@@ -49,4 +49,9 @@ class Kernel:
         pass
 
     def resumen_sistema(self) -> dict:
-        pass
+        return {
+            "reloj": 0,
+            "procesos_activos": 0,
+            "marcos_libres": 0,
+            "bloques_libres": 0,
+        }

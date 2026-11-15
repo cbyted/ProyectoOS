@@ -12,7 +12,7 @@ def crear_proceso(
     cuota_marcos: int = 4,
     prioridad: int = 0,
 ):
-    pass
+    return 1
 
 
 # Devuelve el TID
@@ -32,7 +32,7 @@ def estado_proceso(pid: int):
 
 # dicts: pid, nombre, usuario, estado, prioridad, cpu_usada, tiempo_espera
 def listar_procesos():
-    pass
+    return []
 
 
 def cola_listos():
@@ -44,7 +44,7 @@ def proceso_en_ejecucion(cpu: int = 0):
 
 
 def metricas_planificacion():
-    pass
+    return {"utilizacion_cpu": 0.0}
 
 
 def politica_planificacion():

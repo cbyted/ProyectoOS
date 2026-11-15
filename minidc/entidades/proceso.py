@@ -6,7 +6,6 @@ class Proceso:
         servicio: str,
         usuario: str,
         estado: str,
-        prioridad: int,
         tiempo_llegada: int,
         rafaga_cpu: int,
     ):
@@ -15,7 +14,6 @@ class Proceso:
         self.servicio = servicio
         self.usuario = usuario
         self.estado = estado
-        self.prioridad = prioridad
         self.tiempo_llegada = tiempo_llegada
         self.rafaga_cpu = rafaga_cpu
         self.abortar = 0

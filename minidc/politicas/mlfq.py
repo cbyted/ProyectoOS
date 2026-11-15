@@ -12,7 +12,6 @@ class MLFQ:
     def __init__(
         self,
         quantums: list[int],
-        procesos: list[Proceso],
         num_cpus: int,
     ) -> None:
         # El número de colas que usa esta Implementación
@@ -23,9 +22,6 @@ class MLFQ:
 
         # Los quantums para cada cola
         self.quantums = quantums
-
-        # Lista de procesos
-        self.procesos = procesos
 
         # Cola de procesos listos
         self.colas = [deque() for _ in range(self.num_colas)]
@@ -99,6 +95,7 @@ class MLFQ:
                 self.proceso_actual[cpu].tiempo_finalizacion
                 - self.proceso_actual[cpu].tiempo_llegada
             )
+            self.proceso_actual[cpu].cambiar_estado("TERMINADO")
             self.terminados.append(self.proceso_actual[cpu])
 
             self.proceso_actual[cpu] = None
@@ -116,6 +113,7 @@ class MLFQ:
                 self.proceso_actual[cpu].tiempo_finalizacion
                 - self.proceso_actual[cpu].tiempo_llegada
             )
+            self.proceso_actual[cpu].cambiar_estado("TERMINADO")
             self.terminados.append(self.proceso_actual[cpu])
 
             self.proceso_actual[cpu] = None
@@ -125,43 +123,56 @@ class MLFQ:
             self.quantum_restante[cpu] == 0 and self.proceso_actual[cpu].rafaga_cpu > 0
         ):
             nivel_siguiente = self.nivel_actual[cpu] + 1
+            self.proceso_actual[cpu].cambiar_estado("LISTO")
             self.colas[nivel_siguiente].append(self.proceso_actual[cpu])
 
             self.proceso_actual[cpu] = None
             self.nivel_actual[cpu] = None
             self.quantum_restante[cpu] = 0
 
-    def ejecutar_tick(self, reloj_actual: int) -> None:
+    # Mostrar resultados parciales para prueba
+    def mostrar_resultado(self, reloj_actual: int) -> None:
+        print(f"\nRELOJ ACTUAL: {reloj_actual}")
+
+        for cpu, proceso in enumerate(self.proceso_actual):
+            if proceso is None:
+                print(f"CPU {cpu}: libre")
+            else:
+                print(
+                    f"CPU {cpu}: {proceso.nombre}, "
+                    f"rafaga restante: {proceso.rafaga_cpu}, "
+                    f"nivel: {self.nivel_actual[cpu]}"
+                )
+
+        for nivel, cola in enumerate(self.colas):
+            procesos = ", ".join(f"{p.nombre} (rafaga: {p.rafaga_cpu})" for p in cola)
+            print(f"Nivel {nivel}: [{procesos}]")
+
+    def ejecutar_tick(self, procesos: list[Proceso], reloj_actual: int) -> None:
         # Admitir procesos
-        for proceso in self.procesos:
+        for proceso in procesos:
             if proceso.tiempo_llegada == reloj_actual:
+                proceso.cambiar_estado("LISTO")
                 self.nuevo(proceso)
 
         # Los procesos listos esperan un tick.
         for cola in self.colas:
             for proceso in cola:
-                proceso.cambiar_estado("LISTO")
                 proceso.tiempo_espera += 1
 
         # Cada CPU selecciona y ejecuta como máximo un proceso.
         for cpu in range(self.num_cpus):
-            if self.proceso_actual[cpu] is None:
-                self.elegir_proceso(cpu)
+            self.elegir_proceso(cpu)
 
             nivel = self.nivel_actual[cpu]
             if self.proceso_actual[cpu] is None or nivel is None:
                 continue
+
+            self.proceso_actual[cpu].cambiar_estado("EJECUTANDO")
 
             if nivel == self.num_colas - 1:
                 self.first_come_first_served(cpu, reloj_actual)
             else:
                 self.round_robin(cpu, reloj_actual)
 
-    # Mostrar resultados parciales para prueba
-    def mostrar_resultado_tick(self):
-        for nivel, cola in enumerate(self.colas):
-            if cola:
-                print(f"Nivel {nivel}: [")
-                for proceso in cola:
-                    print(f"  {proceso.rafaga_cpu},")
-                print("]\n")
+        self.mostrar_resultado(reloj_actual)

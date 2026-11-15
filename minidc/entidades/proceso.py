@@ -8,7 +8,6 @@ class Proceso:
         estado: str,
         prioridad: int,
         tiempo_llegada: int,
-        tiempo_esperado: int,
         rafaga_cpu: int,
     ):
         self.pid = pid

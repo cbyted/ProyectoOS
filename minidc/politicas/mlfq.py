@@ -1,4 +1,4 @@
-from .proceso import Proceso
+from entidades.proceso import Proceso
 from collections import deque
 
 """
@@ -145,9 +145,18 @@ class MLFQ:
 
             nivel = self.nivel_actual[cpu]
             if self.proceso_actual[cpu] is None or nivel is None:
-                continue  # CPU ociosa
+                continue
 
             if nivel == self.num_colas - 1:
                 self.first_come_first_served(cpu, reloj_actual)
             else:
                 self.round_robin(cpu, reloj_actual)
+
+    # Mostrar resultados parciales para prueba
+    def mostrar_resultado_tick(self):
+        for nivel, cola in enumerate(self.colas):
+            if cola:
+                print(f"Nivel {nivel}: [")
+                for proceso in cola:
+                    print(f"{proceso.rafaga_cpu}, ")
+                print("]")

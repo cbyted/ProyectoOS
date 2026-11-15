@@ -10,8 +10,9 @@ from .consola import *
 
 
 class Kernel:
-    def __init__(self, config):
+    def __init__(self):
         self.reloj = 0
+        self.config = {}
 
         # Resumen sistema
         self.procesos_activos = []

@@ -1,5 +1,5 @@
-from entidades.proceso import Proceso
-from politicas.mlfq import MLFQ
+from .entidades.proceso import Proceso
+from .politicas.mlfq import MLFQ
 
 # "programa": [ ["CPU", 2], ["ES", 40], ["CPU", 1] ]
 
@@ -26,11 +26,11 @@ class APIProcesos:
         if not programa:
             raise ValueError("El programa no puede estar vacío.")
 
-        rafaga_cpu = None
-
-        for tipo, valor in programa:
-            if tipo == "CPU":
-                rafaga_cpu = valor
+        rafaga_cpu = sum(valor for tipo, valor in programa if tipo == "CPU")
+        if rafaga_cpu <= 0:
+            raise ValueError("El programa debe incluir una ráfaga de CPU positiva.")
+        if reloj_actual is None:
+            reloj_actual = 0
 
         pid = self.pid_siguiente
         proceso = Proceso(
@@ -92,9 +92,66 @@ class APIProcesos:
         pass
 
     def politica_planificacion(self) -> str:
-        return {
-            "nombre": "MLFQ",
-            "num_colas": self.planificador.num_colas,
-            "quantums": self.planificador.quantums,
-            "num_cpus": self.planificador.num_cpus,
-        }
+        return "MLFQ"
+
+
+def _reloj_cero() -> int:
+    return 0
+
+
+_api = APIProcesos(MLFQ([4, 8], 1))
+_reloj_actual = _reloj_cero
+
+
+def _configurar(num_cpus: int, reloj_actual=None) -> APIProcesos:
+    global _api, _reloj_actual
+    _reloj_actual = reloj_actual or _reloj_cero
+    _api = APIProcesos(MLFQ([4, 8], num_cpus))
+    return _api
+
+
+def crear_proceso(
+    nombre: str,
+    usuario: str,
+    programa: list,
+    memoria_bytes: int = 4096,
+    cuota_marcos: int = 4,
+    prioridad: int = 0,
+) -> int:
+    return _api.crear_proceso(
+        nombre,
+        usuario,
+        programa,
+        memoria_bytes,
+        cuota_marcos,
+        prioridad,
+        _reloj_actual(),
+    )
+
+
+def terminar_proceso(pid: int) -> None:
+    _api.terminar_proceso(pid)
+
+
+def estado_proceso(pid: int):
+    return _api.estado_proceso(pid)
+
+
+def listar_procesos() -> list:
+    return _api.listar_procesos()
+
+
+def cola_listos() -> list:
+    return [
+        proceso.pid
+        for cola in _api.planificador.colas
+        for proceso in cola
+    ]
+
+
+def proceso_en_ejecucion(cpu: int = 0):
+    return _api.proceso_en_ejecucion(cpu)
+
+
+def politica_planificacion() -> str:
+    return _api.politica_planificacion()

@@ -17,9 +17,9 @@ class Proceso:
         self.estado = estado
         self.tiempo_llegada = tiempo_llegada
         self.rafaga_cpu = rafaga_cpu
-        self.memoria_bytes = 4096
-        self.cuota_marcos = 4
-        self.prioridad = 0
+        self.memoria_bytes = memoria_bytes
+        self.cuota_marcos = cuota_marcos
+        self.prioridad = prioridad
         self.hilos = []
 
         # Metricas únicas de cada proceso

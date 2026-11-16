@@ -157,6 +157,10 @@ class Consola:
 _consola = Consola()
 
 
+def _reiniciar_estado() -> None:
+    _consola._sesiones.clear()
+
+
 def ejecutar_comando(linea: str, usuario: str = "admin") -> str:
     """Ejecuta comandos del sistema."""
 

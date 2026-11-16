@@ -1,4 +1,4 @@
-from entidades.proceso import Proceso
+from ..entidades.proceso import Proceso
 from collections import deque
 
 """
@@ -172,7 +172,10 @@ class MLFQ:
     def ejecutar_tick(self, procesos: list[Proceso], reloj_actual: int) -> None:
         # Admitir procesos
         for proceso in procesos:
-            if proceso.tiempo_llegada == reloj_actual:
+            if (
+                proceso.estado == "NUEVO"
+                and proceso.tiempo_llegada <= reloj_actual
+            ):
                 proceso.cambiar_estado("LISTO")
                 self.nuevo(proceso)
 
@@ -195,5 +198,3 @@ class MLFQ:
                 self.first_come_first_served(cpu, reloj_actual)
             else:
                 self.round_robin(cpu, reloj_actual)
-
-        self.mostrar_resultado(reloj_actual)

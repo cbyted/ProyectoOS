@@ -38,8 +38,21 @@ class MLFQ:
         # El tiempo que falta para que el proceso termine
         self.quantum_restante = [0] * num_cpus
 
+        # El tiempo de ocupación de cada CPU
+        self.ticks_ocupados = [0] * self.num_cpus
+
+    # Inserta un nuevo proceso listo a la cola de mayor prioridad basandose en
+    # su prioridad al momento de hacer la inserción
     def nuevo(self, proceso: Proceso):
-        self.colas[0].append(proceso)
+        cola = self.colas[0]
+
+        pos = len(cola)
+        for i, actual in enumerate(cola):
+            if proceso.prioridad < actual.prioridad:
+                pos = i
+                break
+
+        cola.insert(pos, proceso)
 
     # Elegir el proceso de mayor prioridad
     def elegir_proceso(self, cpu: int) -> None:
@@ -89,6 +102,10 @@ class MLFQ:
     # Algoritmo para la última cola
     def first_come_first_served(self, cpu: int, reloj_actual: int) -> None:
         self.proceso_actual[cpu].rafaga_cpu -= 1
+        self.proceso_actual[cpu].cpu_usada += 1
+        if self.proceso_actual[cpu] is not None:
+            self.ticks_ocupados[cpu] += 1
+
         if self.proceso_actual[cpu].rafaga_cpu == 0:
             self.proceso_actual[cpu].tiempo_finalizacion = reloj_actual + 1
             self.proceso_actual[cpu].tiempo_retorno = (
@@ -105,7 +122,11 @@ class MLFQ:
     # Algoritmo para las demás colas
     def round_robin(self, cpu: int, reloj_actual: int) -> None:
         self.proceso_actual[cpu].rafaga_cpu -= 1
+        self.proceso_actual[cpu].cpu_usada += 1
         self.quantum_restante[cpu] -= 1
+
+        if self.proceso_actual[cpu] is not None:
+            self.ticks_ocupados[cpu] += 1
 
         if self.proceso_actual[cpu].rafaga_cpu == 0:
             self.proceso_actual[cpu].tiempo_finalizacion = reloj_actual + 1

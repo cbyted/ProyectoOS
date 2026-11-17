@@ -20,6 +20,11 @@ El paquete `minidc` sigue una separación por capas diseñada para desacoplar la
 
 ---
 
+## Instalación de Dependencias
+
+bash
+pip install pytest
+
 ## Ejecución de Pruebas
 
 Ubicado en la raíz del repositorio, ejecuta las pruebas:
@@ -56,13 +61,6 @@ ProyectoOS/
 │   ├── procesos_test.py
 │   └── sincronizacion_test.py
 └── README.md
-
-## Instalación de Dependencias
-
-bash
-pip install pytest
-
-
 ---
 
 

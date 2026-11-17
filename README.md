@@ -20,6 +20,15 @@ El paquete `minidc` sigue una separación por capas diseñada para desacoplar la
 
 ---
 
+## Ejecución de Pruebas
+
+Ubicado en la raíz del repositorio, ejecuta las pruebas:
+
+bash
+python -m pytest
+
+--- 
+
 ## Estructura del Repositorio
 
 ```text
@@ -56,9 +65,4 @@ pip install pytest
 
 ---
 
-## Ejecución de Pruebas
 
-Ubicado en la raíz del repositorio, ejecuta las pruebas:
-
-bash
-python -m pytest

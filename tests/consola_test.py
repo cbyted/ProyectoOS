@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from minidc import consola, kernel, procesos
+from minidc import archivos, consola, kernel, procesos
 from minidc.errores import ErrorPermiso, ErrorSistema
 
 
@@ -169,3 +169,81 @@ def test_reiniciar_kernel_limpia_sesiones():
 
     assert consola.historial("cliente_a") == []
     assert consola.directorio_actual("cliente_a") == "/"
+
+def test_cargar_escenario_crea_usuarios_para_el_sistema_de_archivos(tmp_path):
+    escenario = {
+        "config": CONFIG,
+        "usuarios": ["cliente_a", "cliente_b"],
+        "catalogo": {},
+        "llegadas": [],
+    }
+    ruta = tmp_path / "usuarios.json"
+    ruta.write_text(json.dumps(escenario), encoding="utf-8")
+    kernel.cargar_escenario(str(ruta))
+
+    assert consola.ejecutar_comando("whoami", "cliente_a") == "cliente_a"
+    assert consola.ejecutar_comando("mkdir /datos", "cliente_a").startswith("Error:")
+    assert consola.ejecutar_comando("mkdir /datos", "admin") == "Directorio creado: /datos"
+    assert consola.ejecutar_comando("chmod 777 /datos", "admin").startswith("Permisos")
+    assert consola.ejecutar_comando("touch /datos/a.txt", "cliente_a").startswith("Archivo preparado")
+
+
+def test_echo_escribe_y_anexa_respetando_comillas():
+    assert consola.ejecutar_comando("mkdir /notas") == "Directorio creado: /notas"
+
+    escritura = consola.ejecutar_comando('echo "hola mundo" > /notas/a.txt')
+    anexo = consola.ejecutar_comando('echo " adicional" >> /notas/a.txt')
+
+    assert escritura == "10 bytes escritos en /notas/a.txt."
+    assert anexo == "10 bytes añadidos en /notas/a.txt."
+    assert consola.ejecutar_comando("cat /notas/a.txt") == "hola mundo adicional"
+
+
+def test_ls_l_funciona_al_listar_un_enlace_a_directorio():
+    consola.ejecutar_comando("mkdir /real")
+    consola.ejecutar_comando("touch /real/dato.txt")
+    consola.ejecutar_comando("ln -s /real /alias")
+
+    resultado = consola.ejecutar_comando("ls -l /alias")
+
+    assert resultado.startswith("MODO PROPIETARIO GRUPO TAMAÑO NOMBRE")
+    assert "dato.txt" in resultado
+
+
+def test_cada_usuario_conserva_su_directorio_actual():
+    archivos.crear_usuario("cliente_a")
+    archivos.crear_usuario("cliente_b")
+    consola.ejecutar_comando("mkdir /compartido")
+    consola.ejecutar_comando("chmod 777 /compartido")
+
+    assert consola.ejecutar_comando("cd /compartido", "cliente_a") == ""
+    assert consola.ejecutar_comando("pwd", "cliente_a") == "/compartido"
+    assert consola.ejecutar_comando("pwd", "cliente_b") == "/"
+
+
+def test_comillas_sin_cerrar_y_redireccion_invalida_devuelven_error():
+    assert consola.ejecutar_comando('echo "texto sin cerrar').startswith("Error:")
+    assert consola.ejecutar_comando("echo texto >>> /archivo.txt").startswith("Error:")
+
+
+def test_tree_muestra_jerarquia_de_directorios():
+    consola.ejecutar_comando("mkdir /datos")
+    consola.ejecutar_comando("mkdir /datos/informes")
+    consola.ejecutar_comando("touch /datos/informes/a.txt")
+
+    resultado = consola.ejecutar_comando("tree /datos")
+
+    assert resultado.splitlines() == [
+        "datos",
+        "└── informes",
+        "    └── a.txt",
+    ]
+
+
+def test_ls_l_muestra_nombre_del_enlace_a_archivo():
+    consola.ejecutar_comando('echo "contenido" > /original.txt')
+    consola.ejecutar_comando("ln -s /original.txt /acceso.txt")
+
+    resultado = consola.ejecutar_comando("ls -l /acceso.txt")
+
+    assert resultado.endswith(" acceso.txt")

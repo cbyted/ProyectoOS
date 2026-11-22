@@ -77,7 +77,6 @@ class Consola:
             # Errores de sintaxis y conversiones numericas.
             return f"Error: {error}"
 
-
     def _cmd_ps(self, args: list[str], usuario: str) -> str:
         """Lista los procesos registrados en el subsistema de procesos."""
 
@@ -102,7 +101,7 @@ class Consola:
         """Crea un proceso a partir de una definición del escenario cargado."""
 
         if len(args) != 1:
-            raise ValueError('Uso: run NOMBRE (ejemplo: run web)')
+            raise ValueError("Uso: run NOMBRE (ejemplo: run web)")
 
         nombre = args[0]
 
@@ -119,7 +118,9 @@ class Consola:
 
         programa = definicion.get("programa")
         if not isinstance(programa, list) or not programa:
-            raise ValueError(f"El programa '{nombre}' no contiene instrucciones válidas.")
+            raise ValueError(
+                f"El programa '{nombre}' no contiene instrucciones válidas."
+            )
 
         # Los parámetros opcionales conservan los valores por defecto.
         pid = procesos.crear_proceso(
@@ -194,6 +195,7 @@ class Consola:
 
         return salida
 
+
 # Instancia y funciones auxiliares publicas.
 _consola = Consola()
 
@@ -218,3 +220,4 @@ def historial(usuario: str = "admin") -> list[str]:
     """Devuelve una copia del historial de comandos de un usuario."""
 
     return list(_consola._obtener_sesion(usuario).historial)
+

@@ -1,8 +1,6 @@
 from .entidades.proceso import Proceso
 from .politicas.mlfq import MLFQ
 
-# "programa": [ ["CPU", 2], ["ES", 40], ["CPU", 1] ]
-
 
 class APIProcesos:
     def __init__(self, planificador: MLFQ) -> None:
@@ -20,9 +18,9 @@ class APIProcesos:
         memoria_bytes: int = 4096,
         cuota_marcos: int = 4,
         prioridad: int = 0,
-        reloj_actual=None,
     ) -> int:
 
+        reloj_actual = 0
         if not programa:
             raise ValueError("El programa no puede estar vacío.")
 
@@ -125,7 +123,6 @@ def crear_proceso(
         memoria_bytes,
         cuota_marcos,
         prioridad,
-        _reloj_actual(),
     )
 
 
@@ -142,11 +139,7 @@ def listar_procesos() -> list:
 
 
 def cola_listos() -> list:
-    return [
-        proceso.pid
-        for cola in _api.planificador.colas
-        for proceso in cola
-    ]
+    return [proceso.pid for cola in _api.planificador.colas for proceso in cola]
 
 
 def proceso_en_ejecucion(cpu: int = 0):

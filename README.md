@@ -40,6 +40,7 @@ python -m pytest
 ProyectoOS/
 ├── docs/                 
 │   └── Diagrama_de_NimbusDC.md
+    └── Informe.pdf
 ├── minidc/                  
 │   ├── entidades/           
 │   ├── politicas/           

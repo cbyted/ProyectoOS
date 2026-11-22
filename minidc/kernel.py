@@ -27,9 +27,7 @@ def _validar_config(config: dict) -> dict:
         minimo = 0 if clave == "cache_bloques" else 1
         valor = valores[clave]
         if isinstance(valor, bool) or not isinstance(valor, int) or valor < minimo:
-            raise ValueError(
-                f"'{clave}' debe ser un entero mayor o igual a {minimo}."
-            )
+            raise ValueError(f"'{clave}' debe ser un entero mayor o igual a {minimo}.")
     return valores
 
 
@@ -71,9 +69,7 @@ class Kernel:
         self.llegadas = []
         self._siguiente_llegada = 0
         consola._reiniciar_estado()
-        self.api_procesos = procesos._configurar(
-            self.num_cpus, lambda: self.reloj
-        )
+        self.api_procesos = procesos._configurar(self.num_cpus, lambda: self.reloj)
 
     def apagar_sistema(self) -> dict:
         return self.resumen_sistema()
@@ -93,7 +89,6 @@ class Kernel:
                 memoria_bytes=definicion.get("memoria_bytes", 4096),
                 cuota_marcos=definicion.get("cuota_marcos", 4),
                 prioridad=definicion.get("prioridad", 0),
-                reloj_actual=llegada["tick"],
             )
 
     def tick(self) -> None:
@@ -141,13 +136,14 @@ class Kernel:
             usuario = llegada.get("usuario", "admin")
             if isinstance(tick, bool) or not isinstance(tick, int) or tick < 0:
                 raise ValueError("El tick de llegada debe ser un entero no negativo.")
-            if (
-                not isinstance(nombre_programa, str)
-                or nombre_programa not in catalogo
-            ):
-                raise ValueError(f"Programa no definido en el catálogo: {nombre_programa}.")
+            if not isinstance(nombre_programa, str) or nombre_programa not in catalogo:
+                raise ValueError(
+                    f"Programa no definido en el catálogo: {nombre_programa}."
+                )
             if not isinstance(usuario, str) or not usuario:
-                raise ValueError("El usuario de cada llegada debe ser un texto no vacío.")
+                raise ValueError(
+                    "El usuario de cada llegada debe ser un texto no vacío."
+                )
             definicion = catalogo[nombre_programa]
             if not isinstance(definicion, dict) or not isinstance(
                 definicion.get("programa"), list
@@ -166,10 +162,7 @@ class Kernel:
 
     def resumen_sistema(self) -> dict:
         procesos_activos = (
-            sum(
-                proceso.estado != "TERMINADO"
-                for proceso in self.api_procesos.procesos
-            )
+            sum(proceso.estado != "TERMINADO" for proceso in self.api_procesos.procesos)
             if self.api_procesos is not None
             else 0
         )

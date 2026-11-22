@@ -15,6 +15,7 @@ CONFIG = {
     "cache_bloques": 8,
 }
 
+
 @pytest.fixture(autouse=True)
 def sistema_inicializado():
     """Reinicia kernel, procesos y sesiones antes de cada prueba."""
@@ -27,7 +28,8 @@ def cargar_catalogo(tmp_path, catalogo=None):
     """Carga un escenario mínimo con los programas indicados."""
     escenario = {
         "config": CONFIG,
-        "catalogo": catalogo or {
+        "catalogo": catalogo
+        or {
             "web": {
                 "memoria_bytes": 1024,
                 "cuota_marcos": 3,
@@ -138,6 +140,7 @@ def test_top_rechaza_argumentos():
 
 def test_consola_convierte_excepciones_del_sistema_en_texto(monkeypatch):
     """Las excepciones derivadas de ErrorSistema se presentan como Error:."""
+
     def lanzar_error():
         raise ErrorPermiso("operación no permitida")
 

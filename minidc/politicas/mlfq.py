@@ -93,12 +93,6 @@ class MLFQ:
             tiempos.append(cola[i].tiempo_finalizacion)
         return tiempos
 
-    def calcular_tiempo_restante(self, cola: deque[Proceso]) -> list[int]:
-        return [proc.rafaga_cpu for proc in cola]
-
-    def actualizar_tiempo_espera(self, proceso: Proceso, reloj_actual: int) -> int:
-        proceso.tiempo_espera += reloj_actual - proceso.tiempo_finalizacion
-
     # Algoritmo para la última cola
     def first_come_first_served(self, cpu: int, reloj_actual: int) -> None:
         self.proceso_actual[cpu].rafaga_cpu -= 1
@@ -172,10 +166,7 @@ class MLFQ:
     def ejecutar_tick(self, procesos: list[Proceso], reloj_actual: int) -> None:
         # Admitir procesos
         for proceso in procesos:
-            if (
-                proceso.estado == "NUEVO"
-                and proceso.tiempo_llegada <= reloj_actual
-            ):
+            if proceso.estado == "NUEVO" and proceso.tiempo_llegada <= reloj_actual:
                 proceso.cambiar_estado("LISTO")
                 self.nuevo(proceso)
 
@@ -198,3 +189,5 @@ class MLFQ:
                 self.first_come_first_served(cpu, reloj_actual)
             else:
                 self.round_robin(cpu, reloj_actual)
+
+        self.mostrar_resultado(reloj_actual)

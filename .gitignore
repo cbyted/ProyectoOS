@@ -1,2 +1,6 @@
-minidc/**/__pycache__/
-tests/**/__pycache__/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.idea/

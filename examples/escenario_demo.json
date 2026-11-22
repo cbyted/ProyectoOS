@@ -1,0 +1,33 @@
+{
+  "config": {
+    "num_cpus": 2,
+    "marcos_fisicos": 16,
+    "tam_pagina": 256,
+    "bloques_disco": 200,
+    "tam_bloque": 512,
+    "cache_bloques": 8
+  },
+  "usuarios": ["cliente_a", "cliente_b"],
+  "semaforos": {},
+  "catalogo": {
+    "web": {
+      "memoria_bytes": 1024,
+      "cuota_marcos": 3,
+      "prioridad": 1,
+      "programa": [["CPU", 2], ["CPU", 1]]
+    },
+    "analitica": {
+      "memoria_bytes": 4096,
+      "cuota_marcos": 8,
+      "prioridad": 0,
+      "programa": [["CPU", 20]]
+    },
+    "respaldo": {
+      "memoria_bytes": 1024,
+      "cuota_marcos": 2,
+      "prioridad": 2,
+      "programa": [["CPU", 5]]
+    }
+  },
+  "llegadas": []
+}

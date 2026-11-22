@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from . import consola, procesos
+from . import archivos, consola, disco, memoria, procesos
 
 
 _CLAVES_CONFIG = (
@@ -68,6 +68,15 @@ class Kernel:
         self.catalogo = {}
         self.llegadas = []
         self._siguiente_llegada = 0
+
+        # Cada subsistema conserva su propio estado.
+        memoria.inicializar_memoria(nueva_config)
+        disco._configurar(
+            self.bloques_disco,
+            self.tam_bloque,
+            self.cache_bloques,
+        )
+        archivos._configurar(self.bloques_disco, self.tam_bloque)
         consola._reiniciar_estado()
         self.api_procesos = procesos._configurar(self.num_cpus, lambda: self.reloj)
 
@@ -124,10 +133,41 @@ class Kernel:
         config = _validar_config(escenario.get("config"))
         catalogo = escenario.get("catalogo", {})
         llegadas = escenario.get("llegadas", [])
+        usuarios = escenario.get("usuarios", [])
         if not isinstance(catalogo, dict) or not isinstance(llegadas, list):
             raise ValueError("'catalogo' debe ser un objeto y 'llegadas' una lista.")
+        if not isinstance(usuarios, list) or any(
+            not isinstance(nombre, str) or not nombre.strip() for nombre in usuarios
+        ):
+            raise ValueError("'usuarios' debe ser una lista de nombres no vacíos.")
+        usuarios = [nombre.strip() for nombre in usuarios]
+
+        # JSON representa las instrucciones como listas; internamente se
+        # normalizan a tuplas, tal como define el modelo del proyecto.
+        catalogo_validado = {}
+        for nombre, definicion in catalogo.items():
+            if not isinstance(nombre, str) or not nombre:
+                raise ValueError("Cada programa del catálogo debe tener un nombre.")
+            if not isinstance(definicion, dict):
+                raise ValueError(f"Definición inválida para el programa '{nombre}'.")
+            programa = definicion.get("programa")
+            if not isinstance(programa, list) or not programa:
+                raise ValueError(
+                    f"Definición inválida para el programa '{nombre}': falta programa."
+                )
+            instrucciones = []
+            for instruccion in programa:
+                if not isinstance(instruccion, (list, tuple)) or len(instruccion) != 2:
+                    raise ValueError(
+                        f"Instrucción inválida en el programa '{nombre}': {instruccion}."
+                    )
+                instrucciones.append(tuple(instruccion))
+            definicion_validada = dict(definicion)
+            definicion_validada["programa"] = instrucciones
+            catalogo_validado[nombre] = definicion_validada
 
         llegadas_validadas = []
+        usuarios_escenario = list(usuarios)
         for llegada in llegadas:
             if not isinstance(llegada, dict):
                 raise ValueError("Cada llegada debe ser un objeto.")
@@ -136,27 +176,29 @@ class Kernel:
             usuario = llegada.get("usuario", "admin")
             if isinstance(tick, bool) or not isinstance(tick, int) or tick < 0:
                 raise ValueError("El tick de llegada debe ser un entero no negativo.")
-            if not isinstance(nombre_programa, str) or nombre_programa not in catalogo:
+            if (
+                not isinstance(nombre_programa, str)
+                or nombre_programa not in catalogo_validado
+            ):
                 raise ValueError(
                     f"Programa no definido en el catálogo: {nombre_programa}."
                 )
-            if not isinstance(usuario, str) or not usuario:
+            if not isinstance(usuario, str) or not usuario.strip():
                 raise ValueError(
                     "El usuario de cada llegada debe ser un texto no vacío."
                 )
-            definicion = catalogo[nombre_programa]
-            if not isinstance(definicion, dict) or not isinstance(
-                definicion.get("programa"), list
-            ):
-                raise ValueError(
-                    f"Definición inválida para el programa '{nombre_programa}'."
-                )
+            usuario = usuario.strip()
+            if usuario not in usuarios_escenario and usuario != "admin":
+                usuarios_escenario.append(usuario)
             llegadas_validadas.append(
                 {"tick": tick, "programa": nombre_programa, "usuario": usuario}
             )
 
         self.iniciar_sistema(config)
-        self.catalogo = catalogo
+        self.catalogo = catalogo_validado
+        for nombre_usuario in dict.fromkeys(usuarios_escenario):
+            if nombre_usuario != "admin":
+                archivos.crear_usuario(nombre_usuario)
         self.llegadas = sorted(llegadas_validadas, key=lambda evento: evento["tick"])
         self._procesar_llegadas()
 
@@ -166,6 +208,9 @@ class Kernel:
             if self.api_procesos is not None
             else 0
         )
+        if self.api_procesos is not None:
+            self.marcos_libres = memoria.estado_memoria()["marcos_libres"]
+            self.bloques_libres = archivos.fs_estado_disco()["bloques_libres"]
         return {
             "reloj": self.reloj,
             "procesos_activos": procesos_activos,

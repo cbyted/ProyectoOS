@@ -51,8 +51,6 @@ class APIProcesos:
 
         memoria.registrar_proceso(pid, memoria_bytes, cuota_marcos)
         self.procesos.append(proceso)
-
-        self.procesos.append(proceso)
         self.pid_siguiente += 1
         return pid
 

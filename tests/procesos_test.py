@@ -38,9 +38,7 @@ def test_demostracion_mlfq_finaliza_todos_los_procesos(capsys):
     salida = capsys.readouterr().out
 
     assert "RELOJ ACTUAL" in salida
-    assert all(
-        proceso.estado == "TERMINADO" for proceso in api_procesos.procesos
-    )
+    assert all(proceso.estado == "TERMINADO" for proceso in api_procesos.procesos)
     assert sum(proceso.cpu_usada for proceso in api_procesos.procesos) == 214
     assert len({proceso.pid for proceso in api_procesos.procesos}) == 6
     assert reloj <= 150

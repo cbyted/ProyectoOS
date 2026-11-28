@@ -74,7 +74,9 @@ def test_sobrescritura_libera_bloques_sobrantes():
     estado = archivos.fs_estado_disco()
     assert (estado["bloques_totales"] - estado["bloques_libres"]) == 1
     assert estado["bloques_libres"] == 11
-    assert (estado["bloques_totales"] - estado["bloques_libres"]) + estado["bloques_libres"] == 12
+    assert (estado["bloques_totales"] - estado["bloques_libres"]) + estado[
+        "bloques_libres"
+    ] == 12
 
 
 def test_eliminar_directorio_no_vacio_requiere_recursivo():
@@ -224,7 +226,9 @@ def test_fallo_de_escritura_conserva_el_contenido_anterior():
     bloques_antes = archivos.fs_estado_disco()["bloques_libres"]
 
     with pytest.raises(ErrorSistema):
-        archivos.fs_escribir("/estable.txt", "b" * (3 * CONFIG["tam_bloque"]), "admin", agregar=True)
+        archivos.fs_escribir(
+            "/estable.txt", "b" * (3 * CONFIG["tam_bloque"]), "admin", agregar=True
+        )
 
     assert archivos.fs_leer("/estable.txt", "admin") == contenido_original
     assert archivos.fs_estado_disco()["bloques_libres"] == bloques_antes

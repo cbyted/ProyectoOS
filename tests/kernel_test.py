@@ -15,8 +15,14 @@ CONFIG = {
 }
 
 
-def test_iniciar_sistema_reinicia_reloj_procesos_y_recursos():
+@pytest.fixture(autouse=True)
+def sistema_inicializado():
     kernel.iniciar_sistema(CONFIG)
+    yield
+    kernel.iniciar_sistema(CONFIG)
+
+
+def test_iniciar_sistema_reinicia_reloj_procesos_y_recursos():
     procesos.crear_proceso("web", "cliente_a", [("CPU", 1)])
     kernel.tick()
     assert kernel.resumen_sistema()["procesos_activos"] == 0
@@ -44,9 +50,7 @@ def test_cargar_escenario_programa_llegada_y_ejecuta_ticks(tmp_path):
                 "programa": [["CPU", 2]],
             }
         },
-        "llegadas": [
-            {"tick": 0, "programa": "web", "usuario": "cliente_a"},
-        ],
+        "llegadas": [{"tick": 0, "programa": "web", "usuario": "cliente_a"}],
     }
     ruta = tmp_path / "escenario.json"
     ruta.write_text(json.dumps(escenario), encoding="utf-8")
@@ -71,8 +75,25 @@ def test_cargar_escenario_programa_llegada_y_ejecuta_ticks(tmp_path):
     }
 
 
+def test_llegadas_se_crean_en_su_tick(tmp_path):
+    escenario = {
+        "config": CONFIG,
+        "catalogo": {"web": {"programa": [["CPU", 1]]}},
+        "llegadas": [{"tick": 3, "programa": "web", "usuario": "cliente_a"}],
+    }
+    ruta = tmp_path / "esc.json"
+    ruta.write_text(json.dumps(escenario), encoding="utf-8")
+    kernel.cargar_escenario(str(ruta))
+
+    kernel.ejecutar_ticks(2)
+    assert procesos.listar_procesos() == []
+
+    kernel.tick()  # reloj = 3: llega y se ejecuta en el mismo tick
+    assert len(procesos.listar_procesos()) == 1
+    assert procesos.estado_proceso(0) == "TERMINADO"
+
+
 def test_iniciar_sistema_valida_configuracion_sin_borrar_estado():
-    kernel.iniciar_sistema(CONFIG)
     kernel.ejecutar_ticks(2)
 
     with pytest.raises(ValueError):
@@ -82,7 +103,5 @@ def test_iniciar_sistema_valida_configuracion_sin_borrar_estado():
 
 
 def test_ejecutar_ticks_rechaza_cantidades_invalidas():
-    kernel.iniciar_sistema(CONFIG)
-
     with pytest.raises(ValueError):
         kernel.ejecutar_ticks(-1)

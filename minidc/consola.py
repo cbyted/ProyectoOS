@@ -73,7 +73,9 @@ class Consola:
         if not isinstance(ruta, str) or not ruta:
             raise ValueError("La ruta no puede estar vacía.")
 
-        return posixpath.normpath(ruta if ruta.startswith("/") else posixpath.join(cwd, ruta))
+        return posixpath.normpath(
+            ruta if ruta.startswith("/") else posixpath.join(cwd, ruta)
+        )
 
     def ejecutar(self, linea: str, usuario: str = "admin") -> str:
         """Ejecuta un comando y convierte errores del sistema en texto."""
@@ -152,11 +154,13 @@ class Consola:
         definicion = catalogo[nombre]
 
         if not isinstance(definicion, dict):
-            raise ValueError(f"La definición del programa '{nombre}' es inválida.")
+            raise TypeError(f"La definición del programa '{nombre}' es inválida.")
         programa = definicion.get("programa")
 
         if not isinstance(programa, list) or not programa:
-            raise ValueError(f"El programa '{nombre}' no contiene instrucciones válidas.")
+            raise ValueError(
+                f"El programa '{nombre}' no contiene instrucciones válidas."
+            )
 
         # Los parámetros opcionales conservan los valores por defecto.
         pid = procesos.crear_proceso(
@@ -306,12 +310,11 @@ class Consola:
             raise ValueError('Uso: echo "TEXTO" [> ARCHIVO | >> ARCHIVO]')
 
         operadores_validos = (">", ">>")
-        if any(
-            ">" in parte and parte not in operadores_validos
-            for parte in args
-        ):
+        if any(">" in parte and parte not in operadores_validos for parte in args):
             raise ValueError("Redirección inválida; use > o >>.")
-        posiciones = [indice for indice, parte in enumerate(args) if parte in operadores_validos]
+        posiciones = [
+            indice for indice, parte in enumerate(args) if parte in operadores_validos
+        ]
         if not posiciones:
             return " ".join(args)
         if len(posiciones) != 1:
@@ -418,6 +421,7 @@ class Consola:
             raise ValueError("Uso: whoami")
         return usuario
 
+
 # Instancia y funciones auxiliares publicas.
 _consola = Consola()
 
@@ -442,3 +446,4 @@ def historial(usuario: str = "admin") -> list[str]:
     """Devuelve una copia del historial de comandos de un usuario."""
 
     return list(_consola._obtener_sesion(usuario).historial)
+

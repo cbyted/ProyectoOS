@@ -29,5 +29,7 @@
       "programa": [["CPU", 5]]
     }
   },
-  "llegadas": []
+  "llegadas": [
+        {"tick": 10, "programa": "web", "usuario": "cliente_a"}
+    ]
 }

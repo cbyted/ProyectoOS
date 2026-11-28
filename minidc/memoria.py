@@ -17,6 +17,7 @@ class APIMemoria:
         self.tabla_espacio_direcciones = {}
         self.cuota_marcos = {}
         self.politica = LRU()
+        self.reaccion_hiperpaginacion_activada = False
         self.ventana_fallos = deque(maxlen=10)
 
     def inicializar_memoria(self, config: dict) -> None:
@@ -31,6 +32,8 @@ class APIMemoria:
         self.tam_pagina = tam_pagina
         self.marcos_fisicos = marcos_fisicos
         self.marcos = [Marco(numero=i) for i in range(marcos_fisicos)]
+        self.marcos_fisicos = config["marcos_fisicos"]
+        self.reaccion_hiperpaginacion_activada = False
 
         # Reiniciar todo
         self.fallos_pagina = 0
@@ -61,91 +64,70 @@ class APIMemoria:
         )
         self.cuota_marcos[pid] = max(0, cuota_marcos)
 
-    def acceder_memoria(
-        self,
-        pid: int,
-        direccion_virtual: int,
-        escritura: bool = False,
-    ) -> dict:
-        espacio_direcciones = self.tabla_espacio_direcciones.get(pid)
-
-        if espacio_direcciones is None or not espacio_direcciones.direccion_valida(
-            direccion_virtual
+    def acceder_memoria(self, pid, direccion_virtual, escritura=False) -> dict:
+        if isinstance(direccion_virtual, bool) or not isinstance(
+            direccion_virtual, int
         ):
+            raise ErrorMemoria("La dirección virtual debe ser un entero.")
+        espacio = self.tabla_espacio_direcciones.get(pid)
+        if espacio is None or not espacio.direccion_valida(direccion_virtual):
             raise ErrorMemoria(
                 f"Dirección virtual {direccion_virtual} inválida para PID {pid}"
             )
 
-        pagina = espacio_direcciones.obtener_pagina(direccion_virtual)
-        entrada = espacio_direcciones.paginas[pagina]
-        self.accesos += 1
+        pagina = espacio.obtener_pagina(direccion_virtual)
+        entrada = espacio.paginas[pagina]
 
-        # La pagina existe
+        # --- Acierto ---
         if entrada.presente:
+            self.accesos += 1
             marco = self.marcos[entrada.marco]
             marco.registrar_uso(self.accesos, escritura)
-
             entrada.referenciada = True
             if escritura:
                 entrada.modificada = True
-
-            self.ventana_fallos.append(0)
-
+            self.ventana_fallos.append((pid, 0))
             return {
                 "marco": marco.numero,
                 "fallo_pagina": False,
                 "pagina_reemplazada": None,
             }
 
-        # Fallo de página.
-        self.fallos_pagina += 1
-        self.ventana_fallos.append(1)
-
-        marcos_libres = [marco for marco in self.marcos if marco.libre()]
+        # --- Fallo de página: primero la cuota, luego marcos libres, luego LRU ---
+        residentes = [m for m in self.marcos if m.pid == pid]
+        cuota = self.cuota_marcos.get(pid, 0)
+        tope = cuota > 0 and len(residentes) >= cuota
+        libres = [] if tope else [m for m in self.marcos if m.libre()]
 
         pagina_reemplazada = None
-
-        if marcos_libres:
-            marco = marcos_libres[0]
+        if libres:
+            marco = libres[0]
         else:
-            residentes_proceso = [marco for marco in self.marcos if marco.pid == pid]
-            cuota = self.cuota_marcos.get(pid, len(self.marcos))
-
-            # Si alcanzó su cuota, reemplaza una página.
-            if cuota > 0 and len(residentes_proceso) >= cuota:
-                candidatos = residentes_proceso
-            else:
-                # busca la pagina a remplazar entre todos los marcos.
-                candidatos = self.marcos
-
+            candidatos = residentes if tope else self.marcos
             if not candidatos:
-                raise RuntimeError("No hay marcos disponibles para reemplazar")
-
-            numero_pagina = self.politica.pagina_menos_usada(candidatos)
-            marco = self.marcos[numero_pagina]
+                raise ErrorMemoria("No hay marcos físicos disponibles.")
+            marco = self.marcos[self.politica.pagina_menos_usada(candidatos)]
             pagina_reemplazada = (marco.pid, marco.pagina)
 
-            espacio_anterior = self.tabla_espacio_direcciones.get(marco.pid)
-            if espacio_anterior is not None:
-                entrada_anterior = espacio_anterior.paginas[marco.pagina]
-                entrada_anterior.marco = None
-                entrada_anterior.presente = False
-                entrada_anterior.modificada = False
-                entrada_anterior.referenciada = False
-
+            anterior = self.tabla_espacio_direcciones.get(marco.pid)
+            if anterior is not None:
+                e = anterior.paginas[marco.pagina]
+                e.marco, e.presente = None, False
+                e.modificada = e.referenciada = False
             if marco.modificada:
                 self.escrituras_a_swap += 1
-
             self.reemplazos += 1
+
+        self.accesos += 1
+        self.fallos_pagina += 1
+        self.ventana_fallos.append((pid, 1))
 
         marco.asignar(pid, pagina, self.accesos)
         marco.modificada = escritura
-
         entrada.marco = marco.numero
         entrada.presente = True
         entrada.modificada = escritura
         entrada.referenciada = True
-
         return {
             "marco": marco.numero,
             "fallo_pagina": True,
@@ -212,11 +194,41 @@ class APIMemoria:
         }
 
     def detectar_hiperpaginacion(self) -> bool:
-        # 5 o más fallos en los últimos 10 accesos.
         return (
             len(self.ventana_fallos) == self.ventana_fallos.maxlen
-            and sum(self.ventana_fallos) >= 5
+            and sum(f for _, f in self.ventana_fallos) >= 5
         )
+
+    # --- Reacción a la hiperpaginación (RM2) ---
+    def fallos_recientes(self) -> dict:
+        cuenta = {}
+        for pid, fallo in self.ventana_fallos:
+            if fallo:
+                cuenta[pid] = cuenta.get(pid, 0) + 1
+        return cuenta
+
+    def reiniciar_ventana(self) -> None:
+        self.ventana_fallos.clear()
+
+    def cuota_de(self, pid: int) -> int:
+        return max(1, self.cuota_marcos.get(pid, 1))
+
+    def suspender_proceso(self, pid: int) -> int:
+        """Swap-out: libera todos los marcos pero conserva el espacio de direcciones."""
+        espacio = self.tabla_espacio_direcciones.get(pid)
+        if espacio is None:
+            return 0
+        liberados = 0
+        for marco in self.marcos:
+            if marco.pid == pid:
+                if marco.modificada:
+                    self.escrituras_a_swap += 1
+                marco.liberar()
+                liberados += 1
+        for e in espacio.paginas.values():
+            e.marco, e.presente = None, False
+            e.modificada = e.referenciada = False
+        return liberados
 
     def politica_reemplazo(self) -> str:
         return "LRU"
@@ -263,6 +275,22 @@ def metricas_memoria() -> dict:
 
 def detectar_hiperpaginacion() -> bool:
     return _api.detectar_hiperpaginacion()
+
+
+def fallos_recientes() -> dict:
+    return _api.fallos_recientes()
+
+
+def reiniciar_ventana() -> None:
+    _api.reiniciar_ventana()
+
+
+def cuota_de(pid: int) -> int:
+    return _api.cuota_de(pid)
+
+
+def suspender_proceso(pid: int) -> int:
+    return _api.suspender_proceso(pid)
 
 
 def politica_reemplazo() -> str:

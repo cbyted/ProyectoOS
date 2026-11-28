@@ -16,7 +16,7 @@ _CLAVES_CONFIG = (
 
 def _validar_config(config: dict) -> dict:
     if not isinstance(config, dict):
-        raise ValueError("La configuración debe ser un diccionario.")
+        raise TypeError("La configuración debe ser un diccionario.")
 
     faltantes = [clave for clave in _CLAVES_CONFIG if clave not in config]
     if faltantes:
@@ -50,6 +50,8 @@ class Kernel:
         self.catalogo = {}
         self.llegadas = []
         self._siguiente_llegada = 0
+        self._suspendidos = {}
+        MIN_SUSPENSION = 30
 
     def iniciar_sistema(self, config: dict) -> None:
         nueva_config = _validar_config(config)
@@ -68,6 +70,7 @@ class Kernel:
         self.catalogo = {}
         self.llegadas = []
         self._siguiente_llegada = 0
+        self._suspendidos = {}
 
         # Cada subsistema conserva su propio estado.
         memoria.inicializar_memoria(nueva_config)
@@ -105,15 +108,52 @@ class Kernel:
             raise RuntimeError("El sistema no ha sido iniciado.")
 
         self.reloj += 1
-        self._procesar_llegadas()
-        self.api_procesos.planificador.ejecutar_tick(
+        self._procesar_llegadas()  # 1. llegadas
+        for pid in disco._avanzar_tick():  # 2. interrupciones de E/S
+            self.api_procesos.desbloquear(pid)
+        self.api_procesos.planificador.ejecutar_tick(  # 3 y 4. CPU + métricas
             self.api_procesos.procesos, self.reloj
         )
+        self._controlar_hiperpaginacion()
         self.procesos_activos = [
-            proceso
-            for proceso in self.api_procesos.procesos
-            if proceso.estado != "TERMINADO"
+            p for p in self.api_procesos.procesos if p.estado != "TERMINADO"
         ]
+
+    def _controlar_hiperpaginacion(self) -> None:
+        plan = self.api_procesos.planificador
+        hiper = memoria.detectar_hiperpaginacion()
+
+        # Reanudar procesos suspendidos cuando ya hay espacio y no hay hiperpaginación.
+        for pid, desde in list(self._suspendidos.items()):
+            proceso = self.api_procesos._buscar(pid)
+            if proceso.estado == "TERMINADO":
+                del self._suspendidos[pid]
+            elif (
+                not hiper
+                and self.reloj - desde >= self.MIN_SUSPENSION
+                and memoria.estado_memoria()["marcos_libres"] >= memoria.cuota_de(pid)
+            ):
+                plan.reanudar(proceso)
+                del self._suspendidos[pid]
+
+        if not hiper:
+            return
+        activos = [
+            p
+            for p in self.api_procesos.procesos
+            if p.estado not in ("NUEVO", "TERMINADO") and not p.suspendido
+        ]
+        if len(activos) < 2:
+            return
+        fallos = memoria.fallos_recientes()
+        for proceso in sorted(activos, key=lambda p: -fallos.get(p.pid, 0)):
+            if fallos.get(proceso.pid, 0) == 0:
+                break
+            if plan.suspender(proceso):
+                memoria.suspender_proceso(proceso.pid)
+                memoria.reiniciar_ventana()
+                self._suspendidos[proceso.pid] = self.reloj
+                break
 
     def ejecutar_ticks(self, n: int) -> None:
         if isinstance(n, bool) or not isinstance(n, int) or n < 0:
@@ -129,13 +169,13 @@ class Kernel:
             escenario = json.load(archivo)
 
         if not isinstance(escenario, dict):
-            raise ValueError("El escenario debe ser un objeto JSON.")
+            raise TypeError("El escenario debe ser un objeto JSON.")
         config = _validar_config(escenario.get("config"))
         catalogo = escenario.get("catalogo", {})
         llegadas = escenario.get("llegadas", [])
         usuarios = escenario.get("usuarios", [])
         if not isinstance(catalogo, dict) or not isinstance(llegadas, list):
-            raise ValueError("'catalogo' debe ser un objeto y 'llegadas' una lista.")
+            raise TypeError("'catalogo' debe ser un objeto y 'llegadas' una lista.")
         if not isinstance(usuarios, list) or any(
             not isinstance(nombre, str) or not nombre.strip() for nombre in usuarios
         ):
@@ -170,7 +210,7 @@ class Kernel:
         usuarios_escenario = list(usuarios)
         for llegada in llegadas:
             if not isinstance(llegada, dict):
-                raise ValueError("Cada llegada debe ser un objeto.")
+                raise TypeError("Cada llegada debe ser un objeto.")
             tick = llegada.get("tick")
             nombre_programa = llegada.get("programa")
             usuario = llegada.get("usuario", "admin")
@@ -211,6 +251,10 @@ class Kernel:
         if self.api_procesos is not None:
             self.marcos_libres = memoria.estado_memoria()["marcos_libres"]
             self.bloques_libres = archivos.fs_estado_disco()["bloques_libres"]
+        metricas = self.api_procesos.metricas_planificacion()
+
+        for key, val in metricas.items():
+            print(f"{key}:\t{val}")
         return {
             "reloj": self.reloj,
             "procesos_activos": procesos_activos,

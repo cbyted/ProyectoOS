@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Punto de entrada interactivo: ejecutar con ``python -m minidc``."""
 
 import argparse

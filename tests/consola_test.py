@@ -170,6 +170,7 @@ def test_reiniciar_kernel_limpia_sesiones():
     assert consola.historial("cliente_a") == []
     assert consola.directorio_actual("cliente_a") == "/"
 
+
 def test_cargar_escenario_crea_usuarios_para_el_sistema_de_archivos(tmp_path):
     escenario = {
         "config": CONFIG,
@@ -183,9 +184,13 @@ def test_cargar_escenario_crea_usuarios_para_el_sistema_de_archivos(tmp_path):
 
     assert consola.ejecutar_comando("whoami", "cliente_a") == "cliente_a"
     assert consola.ejecutar_comando("mkdir /datos", "cliente_a").startswith("Error:")
-    assert consola.ejecutar_comando("mkdir /datos", "admin") == "Directorio creado: /datos"
+    assert (
+        consola.ejecutar_comando("mkdir /datos", "admin") == "Directorio creado: /datos"
+    )
     assert consola.ejecutar_comando("chmod 777 /datos", "admin").startswith("Permisos")
-    assert consola.ejecutar_comando("touch /datos/a.txt", "cliente_a").startswith("Archivo preparado")
+    assert consola.ejecutar_comando("touch /datos/a.txt", "cliente_a").startswith(
+        "Archivo preparado"
+    )
 
 
 def test_echo_escribe_y_anexa_respetando_comillas():

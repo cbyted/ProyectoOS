@@ -82,12 +82,7 @@ class SistemaArchivos:
 
     @staticmethod
     def _validar_nombre(nombre: str) -> None:
-        if (
-            not nombre
-            or nombre in (".", "..")
-            or "/" in nombre
-            or "\x00" in nombre
-        ):
+        if not nombre or nombre in (".", "..") or "/" in nombre or "\x00" in nombre:
             raise ValueError("El nombre de archivo o directorio no es válido.")
 
     @staticmethod
@@ -190,7 +185,9 @@ class SistemaArchivos:
     ) -> tuple[NodoArchivo, str, str]:
         ruta_normalizada = self._normalizar_ruta(ruta)
         if ruta_normalizada == "/":
-            raise ErrorPermiso("no se permite modificar o eliminar la raíz del sistema.")
+            raise ErrorPermiso(
+                "no se permite modificar o eliminar la raíz del sistema."
+            )
 
         padre_ruta, nombre = ruta_normalizada.rsplit("/", 1)
         padre_ruta = padre_ruta or "/"
@@ -369,11 +366,15 @@ class SistemaArchivos:
     def fs_chmod(self, ruta: str, modo: str, nombre_usuario: str) -> None:
         usuario = self._usuario(nombre_usuario)
         if not isinstance(modo, str) or re.fullmatch(r"[0-7]{3}", modo) is None:
-            raise ValueError("El modo debe contener tres dígitos octales, por ejemplo 640.")
+            raise ValueError(
+                "El modo debe contener tres dígitos octales, por ejemplo 640."
+            )
 
         nodo, _ = self._resolver_nodo(ruta, usuario, True)
         if usuario.nombre != "admin" and usuario.nombre != nodo.propietario:
-            raise ErrorPermiso("solo el propietario o admin puede cambiar los permisos.")
+            raise ErrorPermiso(
+                "solo el propietario o admin puede cambiar los permisos."
+            )
         nodo.modo = modo
 
     def fs_enlace_simbolico(
